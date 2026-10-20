@@ -1399,7 +1399,7 @@ body > nav .nav-inner{justify-content:center;}
     <div class="contact-conversation reveal">
       <div class="contact-flow" id="contactFlow">
         <div class="contact-intro" id="contactIntro">Hi, let me get to know you.</div>
-        <form class="contact-form" id="contactForm" autocomplete="on" novalidate>
+        <form class="contact-form" id="contactForm" autocomplete="on" novalidate><div class="contact-honey" aria-hidden="true"><label>Leave this empty<input name="website" type="text" tabindex="-1" autocomplete="off"></label></div>
           <div class="contact-step active" data-step="0">
             <div class="contact-progress">01 / 05</div>
             <h2 class="contact-question">First things first. What’s your full name?</h2>
@@ -1432,12 +1432,12 @@ body > nav .nav-inner{justify-content:center;}
               <label class="contact-choice"><input type="radio" name="reach" value="Email" required><span>Email</span></label>
             </div>
             <p id="contactChoiceError" role="alert" hidden>Please choose Phone or Email so we know how to reach you.</p>
-            <div class="contact-actions"><button class="btn btn-solid" type="submit">Continue in WhatsApp →</button></div>
+            <p id="contactSendStatus" role="status" aria-live="polite" hidden></p><div class="contact-actions"><button class="btn btn-solid" type="submit">Send inquiry →</button></div>
           </div>
           <div class="contact-step contact-finish" data-step="5" role="status" tabindex="-1">
             <div class="contact-progress">Done</div>
-            <h2 class="contact-question">One last step.</h2>
-            <p>Your inquiry is ready in WhatsApp. Press Send there to deliver it. We wish you a nice day ahead.</p><a class="btn btn-ghost" id="contactWhatsAppContinue" target="_blank" rel="noopener noreferrer">Open WhatsApp to send →</a>
+            <h2 class="contact-question">Thank you!</h2>
+            <p>Your inquiry has been submitted. We will reach out to you soon, and we wish you a nice day ahead.</p>
           </div>
         </form>
       </div>
@@ -1846,9 +1846,10 @@ if(contactSection && contactIntro && contactForm){
   if(inquiry) inquiry.addEventListener('keydown',e=>{ if(e.key==='Enter' && (e.ctrlKey||e.metaKey)){ e.preventDefault(); advanceContact(); }});
   const choiceError = document.getElementById('contactChoiceError');
   contactForm.querySelectorAll('input[name=reach]').forEach(input=>input.addEventListener('change',()=>{ choiceError.hidden = true; }));
-  contactForm.addEventListener('submit',e=>{
+  let contactSending=false;
+  contactForm.addEventListener('submit',async e=>{
     e.preventDefault();
-    if(contactTransitioning || contactStep === 5) return;
+    if(contactSending || contactTransitioning || contactStep === 5) return;
     if(contactStep < 4){ advanceContact(); return; }
     const fields = Array.from(contactForm.querySelectorAll('.contact-answer'));
     const invalid = fields.find(field=>!field.checkValidity());
@@ -1862,11 +1863,24 @@ if(contactSection && contactIntro && contactForm){
     if(!choice){ choiceError.hidden = false; contactForm.querySelector('input[name=reach]').focus(); return; }
     choiceError.hidden = true;
     const details=new FormData(contactForm);
-    const message=['Website inquiry','Name: '+details.get('name'),'Email: '+details.get('email'),'Phone: '+details.get('phone'),'Inquiry: '+details.get('inquiry'),'Preferred reply: '+details.get('reach')].join('\n');
-    const url='https://wa.me/306948452965?text='+encodeURIComponent(message);
-    const link=document.getElementById('contactWhatsAppContinue');link.href=url;
-    showContactStep(5);
-    window.open(url,'_blank','noopener,noreferrer');
+    if(details.get('website'))return;
+    const button=contactForm.querySelector('button[type=submit]'),status=document.getElementById('contactSendStatus');
+    contactSending=true;button.disabled=true;button.textContent='Sending…';contactForm.setAttribute('aria-busy','true');status.hidden=false;status.textContent='Sending your inquiry…';
+    const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),20000);
+    try{
+      const response=await fetch('https://formsubmit.co/ajax/hmbusinesslab@outlook.com',{
+        method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},signal:controller.signal,
+        body:JSON.stringify({name:String(details.get('name')||'').trim(),email:String(details.get('email')||'').trim(),phone:String(details.get('phone')||'').trim(),inquiry:String(details.get('inquiry')||'').trim(),preferred_reply:details.get('reach'),_replyto:String(details.get('email')||'').trim(),_subject:'HM Business Lab — New website inquiry',_template:'table',_url:'https://www.hmbusinesslab.com/',_honey:''})
+      });
+      const result=await response.json();
+      if(!response.ok||!(result.success===true||result.success==='true'))throw Error('Submission rejected');
+      status.hidden=true;showContactStep(5);
+    }catch(error){
+      status.textContent='We could not confirm your submission. Please try again, or email hmbusinesslab@outlook.com directly.';
+      status.setAttribute('role','alert');
+    }finally{
+      clearTimeout(timeout);contactSending=false;button.disabled=false;button.textContent='Send inquiry →';contactForm.removeAttribute('aria-busy');
+    }
   });
   const contactObserver = new IntersectionObserver(entries=>{ entries.forEach(entry=>{ if(entry.isIntersecting && !contactStarted){ contactStarted=true; contactIntro.classList.add('play'); setTimeout(()=>{ contactIntro.style.display='none'; contactForm.classList.add('ready'); const first=contactForm.querySelector('.contact-answer'); if(first) first.focus(); },2200); contactObserver.disconnect(); }}); },{threshold:.45});
   contactObserver.observe(contactSection);
@@ -2284,6 +2298,6 @@ const params=new URLSearchParams(location.search),language=params.get('_x_tr_tl'
 menu.addEventListener('click',e=>{const a=e.target.closest('[data-language]');if(a)close();});addEventListener('hashchange',updateLinks);updateLinks();
 })();
 </script>
-</body>
+<style>.contact-honey{position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden;}#contactSendStatus{font:13px/1.6 Inter,Arial,sans-serif;max-width:600px;margin:16px 0;color:var(--ink-soft);}#contactSendStatus[role=alert]{color:#ac2c25;}#contactForm button[disabled]{opacity:.55;cursor:wait;}</style></body>
 </html>
 
