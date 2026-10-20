@@ -1975,7 +1975,37 @@ image.src="assets/media-033.png";
  });
  view.querySelector('.diary-panels').addEventListener('pointerleave',()=>{if(!pinned)activate(null);});
  }
- function article(p){const image=safeImage(p.image);view.innerHTML=nav()+`<main class="diary-article diary-editorial diary-view-in"><header class="diary-article-head"><p class="diary-article-kicker">${esc(p.category||'The Business Diary')}</p><h1>${esc(p.title)}</h1>${p.subtitle?`<p class="diary-article-deck">${esc(p.subtitle)}</p>`:''}<p class="diary-byline">Words by ${esc(p.author||'Dr. Mohamed Abdellaziz Hmad')}<span>${meta(p)}</span></p></header><div class="diary-article-body">${markdown(p.body)}</div>${image?`<figure class="diary-editorial-image"><img src="${esc(image)}" alt="${esc(p.image_alt||p.title)}" loading="lazy">${p.image_alt?`<figcaption>${esc(p.image_alt)}</figcaption>`:''}</figure>`:''}<footer class="diary-editorial-footer"><p><i>The Business Diary</i> · ${esc(p.author||'Dr. Mohamed Abdellaziz Hmad')} · ${esc(p.date||'')}</p><a href="#diary">← All articles</a></footer></main>`;}
+ function flowArticleText(body){
+ const text=String(body||''),blocks=text.split(/\n\s*\n/).map(b=>b.trim()).filter(Boolean);
+ const fragments=blocks.filter(b=>b.length<120&&!/[.!?][\x22\u201d\x27]?$/.test(b)&&!/^[-*#]/.test(b));
+ if(blocks.length<15||fragments.length/blocks.length<.35)return text;
+ const clean=blocks.filter(b=>!/^Page \d+ of \d+$/i.test(b)&&!/^The Business Diary [—–-] Entry \d+:/i.test(b));
+ const paragraphs=[];let current='';
+ for(const block of clean){
+  if(/^[-*#]/.test(block)){if(current)paragraphs.push(current);current='';paragraphs.push(block);continue;}
+  const line=block.replace(/\n/g,' ');
+  if(!current){current=line;continue;}
+  if(!/[.!?][\x22\u201d\x27]?$/.test(current)||/^[a-z]/.test(line))current+=' '+line;
+  else{paragraphs.push(current);current=line;}
+ }
+ if(current)paragraphs.push(current);return paragraphs.join('\n\n');
+ }
+ function connectedArticleParagraphs(body){
+ const blocks=flowArticleText(body).split(/\n\s*\n/).map(p=>p.trim()).filter(Boolean);
+ const result=[];let group='';
+ const words=v=>v.split(/\s+/).filter(Boolean).length;
+ const shift=/^(?:But |And so |Years later|At the time|Because that|Then |The first|The old souq|I stood|I asked|My father|Sitting in|And that's|It took me)/i;
+ const special=v=>/^(?:#{1,3} |[-*] )/.test(v);
+ function flush(){if(group)result.push(group);group='';}
+ for(const block of blocks){
+  if(special(block)){flush();result.push(block);continue;}
+  if(group&&((words(group)>=75&&shift.test(block))||words(group)+words(block)>175))flush();
+  group=group?group+' '+block:block;
+  if(words(group)>=125)flush();
+ }
+ flush();return result.join('\n\n');
+ }
+ function article(p){const image=safeImage(p.image);view.innerHTML=nav()+`<main class="diary-article diary-editorial diary-view-in"><header class="diary-article-head"><p class="diary-article-kicker">${esc(p.category||'The Business Diary')}</p><h1>${esc(p.title)}</h1>${p.subtitle?`<p class="diary-article-deck">${esc(p.subtitle)}</p>`:''}<p class="diary-byline">Words by ${esc(p.author||'Dr. Mohamed Abdellaziz Hmad')}<span>${meta(p)}</span></p></header><div class="diary-article-body">${markdown(connectedArticleParagraphs(p.body))}</div>${image?`<figure class="diary-editorial-image"><img src="${esc(image)}" alt="${esc(p.image_alt||p.title)}" loading="lazy">${p.image_alt?`<figcaption>${esc(p.image_alt)}</figcaption>`:''}</figure>`:''}<footer class="diary-editorial-footer"><p><i>The Business Diary</i> · ${esc(p.author||'Dr. Mohamed Abdellaziz Hmad')} · ${esc(p.date||'')}</p><a href="#diary">← All articles</a></footer></main>`;}
  function route(){if(!location.hash.startsWith('#diary')){app.hidden=true;document.body.classList.remove('diary-open');return;}app.hidden=false;document.body.classList.add('diary-open');let slug='';try{slug=decodeURIComponent(location.hash.split('/')[1]||'');}catch{}const p=posts.find(p=>p.slug===slug);if(p)article(p);else listing();app.scrollTop=0;}
  app.addEventListener('click',e=>{if(e.target.closest('[data-diary-exit]')){e.preventDefault();location.hash='articles';app.hidden=true;document.body.classList.remove('diary-open');const section=document.getElementById('articles');if(typeof smoothScroll==='function')smoothScroll(scrollY+section.getBoundingClientRect().top);}});
  addEventListener('hashchange',route);route();
@@ -2180,5 +2210,20 @@ body>section,body>footer{background:transparent!important;}
 .diary-editorial-image{max-width:900px;margin-top:30px;}
 .diary-editorial-footer{margin-top:45px;max-width:900px;}
 @media(max-width:600px){.diary-article.diary-editorial{padding:0 20px 35px;}.diary-editorial .diary-article-head::before{width:28px;height:50px;margin-bottom:28px;}.diary-editorial h1{font-size:clamp(32px,8.5vw,50px);letter-spacing:.015em;margin-bottom:24px;}.diary-editorial .diary-article-kicker{font-size:16px;}.diary-editorial .diary-article-body{font-size:15px;line-height:1.75;text-align:left;}.diary-editorial .diary-byline{margin-bottom:24px;}}
-</style></body>
+</style><style id="diary-wide-centered-desktop">
+@media(min-width:900px){
+ .diary-article.diary-editorial{width:94%;max-width:1600px;margin-left:auto;margin-right:auto;padding-left:0;padding-right:0;}
+ .diary-editorial .diary-article-head{width:100%;max-width:1400px;margin-left:auto;margin-right:auto;}
+ .diary-editorial .diary-article-body,.diary-editorial-image{width:100%;max-width:1400px;margin-left:auto;margin-right:auto;}
+ .diary-editorial .diary-article-body{font-size:16px;line-height:1.8;}
+ .diary-editorial-footer{width:100%;max-width:1400px;margin-left:auto;margin-right:auto;}
+}
+</style><style id="article-full-width-flow">
+@media(min-width:800px){
+ #businessDiaryApp #diaryView .diary-article.diary-editorial{display:block;width:84%;max-width:1320px;margin:0 auto;padding-left:0;padding-right:0;box-sizing:border-box;}
+ #businessDiaryApp .diary-editorial .diary-article-body{display:block;width:100%;max-width:none;column-count:1;columns:auto;margin:0 auto;font-size:16px;line-height:1.8;}
+ #businessDiaryApp .diary-editorial .diary-article-body p{width:100%;max-width:none;text-align:justify;text-align-last:left;white-space:normal;}
+ #businessDiaryApp .diary-editorial .diary-article-head,#businessDiaryApp .diary-editorial-image,#businessDiaryApp .diary-editorial-footer{width:100%;max-width:none;margin-left:auto;margin-right:auto;}
+}
+</style><style>.diary-editorial .diary-article-body p{margin-bottom:24px;}</style></body>
 </html>
