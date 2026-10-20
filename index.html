@@ -2009,7 +2009,7 @@ image.src="assets/media-033.png";
  function route(){if(!location.hash.startsWith('#diary')){app.hidden=true;document.body.classList.remove('diary-open');return;}app.hidden=false;document.body.classList.add('diary-open');let slug='';try{slug=decodeURIComponent(location.hash.split('/')[1]||'');}catch{}const p=posts.find(p=>p.slug===slug);if(p)article(p);else listing();app.scrollTop=0;}
  app.addEventListener('click',e=>{if(e.target.closest('[data-diary-exit]')){e.preventDefault();location.hash='articles';app.hidden=true;document.body.classList.remove('diary-open');const section=document.getElementById('articles');if(typeof smoothScroll==='function')smoothScroll(scrollY+section.getBoundingClientRect().top);}});
  addEventListener('hashchange',route);route();
- fetch(new URL('content/diary.json',document.baseURI),{cache:'no-store'}).then(r=>{if(!r.ok)throw Error('content');return r.json();}).then(data=>{posts=(Array.isArray(data.posts)?data.posts:[]).filter(p=>p.published===true&&/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(p.slug)&&p.title&&p.body).sort((a,b)=>String(b.date).localeCompare(String(a.date)));}).catch(()=>{failed=true;}).finally(()=>{loaded=true;route();});
+ fetch(new URL('content/diary.json',document.baseURI),{cache:'no-store'}).then(r=>{if(!r.ok)throw Error('content');return r.json();}).then(data=>{posts=(Array.isArray(data.posts)?data.posts:[]).filter(p=>p.published===true&&/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(p.slug)&&p.title&&p.body).sort((a,b)=>String(a.date).localeCompare(String(b.date)));}).catch(()=>{failed=true;}).finally(()=>{loaded=true;route();});
 })();
 
 // Fit HM BUSINESS to the complete available landing width.
