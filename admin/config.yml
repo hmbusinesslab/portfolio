@@ -1,0 +1,34 @@
+backend:
+  name: turbo-github
+  turbo_site_id: REPLACE_WITH_YOUR_TURBO_SITE_ID
+  branch: main
+media_folder: assets/uploads
+public_folder: assets/uploads
+collections:
+  - name: diary
+    label: The Business Diary
+    files:
+      - name: entries
+        label: Articles
+        file: content/diary.json
+        fields:
+          - name: posts
+            label: Articles
+            widget: list
+            summary: '{{fields.title}}'
+            fields:
+              - {name: title, label: Title, widget: string}
+              - name: slug
+                label: Article URL name
+                widget: string
+                hint: 'Use lowercase letters, numbers, and hyphens. Must be unique.'
+                pattern: ['^[a-z0-9]+(?:-[a-z0-9]+)*$', 'Use lowercase letters, numbers, and hyphens.']
+              - {name: published, label: Show on website, widget: boolean, default: false}
+              - {name: date, label: Date, widget: datetime, date_format: 'YYYY-MM-DD', time_format: false, format: 'YYYY-MM-DD'}
+              - {name: author, label: Author, widget: string, default: 'Dr. Mohamed Abdellaziz Hmad'}
+              - {name: category, label: Category, widget: string}
+              - {name: subtitle, label: Introduction, widget: text}
+              - {name: cover, label: Cover word, widget: string, required: false, hint: 'Shown if no cover image is supplied.'}
+              - {name: image, label: Cover image, widget: image, required: false}
+              - {name: image_alt, label: Image description, widget: string, required: false}
+              - {name: body, label: Article, widget: markdown, buttons: [bold, italic, heading-two, heading-three, bulleted-list], editor_components: []}
